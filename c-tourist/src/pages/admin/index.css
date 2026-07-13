@@ -1,0 +1,91 @@
+/* ========== 管理后台整体布局 ========== */
+.admin-layout {
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+}
+
+/* ========== 侧边栏 ========== */
+.admin-sider {
+  overflow: auto;
+  height: 100vh;
+}
+
+/* Logo 区域 */
+.admin-logo {
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  margin-bottom: 4px;
+  transition: all 0.2s ease;
+}
+
+.admin-logo-icon {
+  font-size: 24px;
+}
+
+.admin-logo-text {
+  font-size: 15px;
+  font-weight: 600;
+  color: #fff;
+  white-space: nowrap;
+  letter-spacing: 1px;
+}
+
+/* ========== 顶部栏 ========== */
+.admin-header {
+  display: flex;
+  align-items: center;
+  padding: 0 24px !important;
+  height: 64px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+  z-index: 9;
+  gap: 16px;
+}
+
+.admin-collapse-btn {
+  font-size: 18px !important;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.admin-page-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: #1a1a2e;
+  margin: 0;
+}
+
+/* ========== 内容区域 ========== */
+.admin-content {
+  padding: 24px;
+  min-height: calc(100vh - 64px);
+  overflow-y: auto;
+  background: #f0f2f5;
+}
+
+.admin-content-inner {
+  max-width: 1400px;
+}
+
+/* ========== 响应式 ========== */
+@media (max-width: 992px) {
+  .admin-content {
+    padding: 16px;
+  }
+}
+
+/* 自定义侧边栏滚动条 */
+.admin-sider::-webkit-scrollbar {
+  width: 4px;
+}
+
+.admin-sider::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 2px;
+}

@@ -1,0 +1,11 @@
+{
+    "name": "@prometheus-avatar/openclaw-plugin",
+    "version": "0.7.2",
+    "description": "Prometheus Avatar plugin for OpenClaw — give your lobster a body",
+    "type": "module",
+    "main": "src/index.ts",
+    "license": "MIT",
+    "dependencies": {
+        "@prometheusavatar/core": "workspace:*"
+    }
+}

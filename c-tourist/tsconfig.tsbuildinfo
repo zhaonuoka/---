@@ -1,0 +1,1 @@
+{"root":["./src/main.tsx","./src/vite-env.d.ts","./src/pages/admin/index.tsx","./src/pages/admin/pages/dashboard.tsx","./src/pages/admin/pages/logs.tsx","./src/pages/admin/pages/settings.tsx","./src/pages/admin/pages/spots.tsx","./src/pages/tourist/index.tsx","./src/polyfills/fs.ts","./src/polyfills/path.ts","./src/polyfills/ws.ts","./vite.config.ts"],"version":"5.9.3"}

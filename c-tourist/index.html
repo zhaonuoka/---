@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>智慧旅游 - AI 数字人导游</title>
+    <!-- Promise.withResolvers polyfill (SDK 要求) -->
+    <script>
+      if (!Promise.withResolvers) {
+        Promise.withResolvers = function () {
+          var resolve, reject
+          var promise = new Promise(function (res, rej) { resolve = res; reject = rej })
+          return { promise: promise, resolve: resolve, reject: reject }
+        }
+      }
+    </script>
+    <!-- 魔珐星云 3D 数字人 SDK -->
+    <script src="/xmovAvatar.js"></script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
