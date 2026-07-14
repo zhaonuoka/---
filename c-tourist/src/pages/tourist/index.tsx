@@ -9,8 +9,8 @@ declare global {
   }
 }
 
-const APP_ID = '9313f3064f4541afab10817bf0b9ac49'
-const APP_SECRET = '8a570880f2f14bc1a95971b0bca9050c'
+const APP_ID = '288058a62d40422da85205cd269bee8a'
+const APP_SECRET = 'e07f7e5e99194677a4c3639003aa3bf7'
 const GATEWAY = 'https://nebula-agent.xingyun3d.com/user/v1/ttsa/session'
 
 interface ChatMessage {
