@@ -18,14 +18,15 @@ interface ChatMessage {
   role: 'user' | 'ai'
   content: string
   time: string
+  type?: 'text' | 'voice'
 }
 
 /* 静态景点卡片数据 */
 const SPOTS = [
-  { name: '灵山大佛',   desc: '88米青铜立佛',  img: '/images/3.jpg' },
-  { name: '九龙灌浴',   desc: '动态音乐群雕',   img: '/images/4.jpg' },
-  { name: '梵宫',       desc: '佛教艺术殿堂',   img: '/images/5.jpg' },
-  { name: '五印坛城',   desc: '藏传佛教建筑',   img: '/images/1.jpg' },
+  { name: '灵山大佛',   desc: '88米青铜立佛',  img: '/images/灵山大佛.jpg' },
+  { name: '九龙灌浴',   desc: '动态音乐群雕',   img: '/images/九龙灌浴.jpg' },
+  { name: '梵宫',       desc: '佛教艺术殿堂',   img: '/images/梵宫.jpg' },
+  { name: '五印坛城',   desc: '藏传佛教建筑',   img: '/images/五印坛城.jpg' },
 ]
 
 const TouristPage: React.FC = () => {
@@ -35,10 +36,31 @@ const TouristPage: React.FC = () => {
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [isSpeaking, setIsSpeaking] = useState(false)
   const [isRecording, setIsRecording] = useState(false)
+  const [routeName, setRouteName] = useState('灵山胜境经典一日游')
+  const [routeDesc, setRouteDesc] = useState('灵山大佛 → 九龙灌浴 → 梵宫 → 五印坛城')
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const sdkRef = useRef<any>(null)
   const msgIdRef = useRef(0)
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
+  const audioChunksRef = useRef<Blob[]>([])
+  const lastActivityRef = useRef<number>(Date.now())
+  const idleSpokenRef = useRef<boolean>(false)
+  const pageLoadTimeRef = useRef<number>(Date.now())
+  const isSpeakingRef = useRef(false)
+
+  /* 封装 speak —— 防止 SDK 冲突，1.1 倍速 */
+  const safeSpeak = useCallback((text: string) => {
+    if (!sdkRef.current) return
+    isSpeakingRef.current = true
+    setIsSpeaking(true)
+    setTimeout(() => {
+      try { sdkRef.current?.interactiveidle() } catch {}
+      setTimeout(() => {
+        try { sdkRef.current?.speak(text, true, true) } catch {}
+      }, 400)
+    }, 200)
+  }, [])
 
   /* 自动滚到底部 */
   useEffect(() => {
@@ -82,8 +104,10 @@ const TouristPage: React.FC = () => {
           onMessage: (msg: any) => console.log('[XmovSDK] msg:', msg),
           onStateChange: (state: any) => console.log('[XmovSDK] state:', state),
           onVoiceStateChange: (status: string) => {
-            console.log('[XmovSDK] voice:', status)
-            if (status === 'end') setIsSpeaking(false)
+            if (status === 'end') {
+              isSpeakingRef.current = false
+              setIsSpeaking(false)
+            }
           },
         })
 
@@ -97,8 +121,9 @@ const TouristPage: React.FC = () => {
 
         setTimeout(() => {
           if (!destroyed && sdkRef.current) {
+            isSpeakingRef.current = true
             setIsSpeaking(true)
-            try { sdkRef.current.speak('你好！我是你的AI导游😊', true, true) } catch {}
+            try { sdkRef.current.speak('你好！我是你的AI导游😊', true, true, { speed: 1.2 }) } catch {}
           }
         }, 2000)
       } catch (err: any) {
@@ -121,6 +146,42 @@ const TouristPage: React.FC = () => {
     }
   }, [])
 
+  /* ========== 加载推荐路线 ========== */
+  useEffect(() => {
+    fetch('http://localhost:8000/api/recommend', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ interests: ['历史', '文化', '自然'] }),
+    })
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.name) setRouteName(data.name)
+        if (data.spots) setRouteDesc(data.spots.join(' → '))
+      })
+      .catch(() => {})
+  }, [])
+
+  /* ========== 冷场处理：10秒无操作 → 数字人主动搭话 ========== */
+  useEffect(() => {
+    const timer = setInterval(() => {
+      const idle = Date.now() - lastActivityRef.current
+      if (idle >= 10000 && sdkState === 'ready' && sdkRef.current && !isSpeakingRef.current
+          && Date.now() - pageLoadTimeRef.current >= 90000) {
+        lastActivityRef.current = Date.now()
+        isSpeakingRef.current = true
+        setIsSpeaking(true)
+        try { sdkRef.current.interactiveidle() } catch {}
+        if (!idleSpokenRef.current) {
+          idleSpokenRef.current = true
+          setTimeout(() => {
+            try { sdkRef.current?.speak('有什么需要帮助的吗？', true, true, { speed: 1.2 }) } catch {}
+          }, 400)
+        }
+      }
+    }, 1000)
+    return () => clearInterval(timer)
+  }, [sdkState])
+
   /* ========== 发送消息 → /api/chat ========== */
   const handleSend = useCallback(async () => {
     const text = inputValue.trim()
@@ -129,6 +190,7 @@ const TouristPage: React.FC = () => {
 
     setMessages((prev) => [...prev, { id: ++msgIdRef.current, role: 'user', content: text, time: now }])
     setInputValue('')
+    lastActivityRef.current = Date.now()
 
     try {
       const res = await fetch('http://localhost:8000/api/chat', {
@@ -145,13 +207,7 @@ const TouristPage: React.FC = () => {
       }])
 
       if (sdkRef.current) {
-        setTimeout(() => {
-          try { sdkRef.current.interactiveidle() } catch {}
-          setTimeout(() => {
-            setIsSpeaking(true)
-            try { sdkRef.current.speak(reply, true, true) } catch {}
-          }, 200)
-        }, 100)
+        safeSpeak(reply)
       }
     } catch {
       setMessages((prev) => [...prev, {
@@ -166,22 +222,131 @@ const TouristPage: React.FC = () => {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend() }
   }, [handleSend])
 
-  /* 点击景点卡片 —— 自动提问 */
-  const handleSpotClick = useCallback((name: string) => {
-    setInputValue(`请介绍一下${name}`)
-  }, [])
+  /* 点击景点卡片 —— 直接提问并回复 */
+  const handleSpotClick = useCallback(async (name: string) => {
+    const question = `请介绍一下${name}`
+    const now = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
+    lastActivityRef.current = Date.now()
 
-  /* 语音按钮 —— 点击切换录音状态（UI 演示） */
-  const handleVoiceToggle = useCallback(() => {
+    setMessages((prev) => [...prev, { id: ++msgIdRef.current, role: 'user', content: question, time: now }])
+
+    try {
+      const res = await fetch('http://localhost:8000/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question }),
+      })
+      const data = await res.json()
+      const reply: string = data.answer || '抱歉，我现在无法回答。'
+
+      setMessages((prev) => [...prev, {
+        id: ++msgIdRef.current, role: 'ai', content: reply,
+        time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
+      }])
+      lastActivityRef.current = Date.now()
+
+      if (sdkRef.current) {
+        safeSpeak(reply)
+      }
+    } catch {
+      setMessages((prev) => [...prev, {
+        id: ++msgIdRef.current, role: 'ai',
+        content: '抱歉，后端服务未启动。',
+        time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
+      }])
+    }
+  }, [safeSpeak])
+
+  /* 语音按钮 —— 开始/停止录音，发送到后端 STT */
+  const handleVoiceToggle = useCallback(async () => {
     if (isRecording) {
+      // ===== 停止录音 =====
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+        mediaRecorderRef.current.stop()
+      }
       setIsRecording(false)
-    } else {
+      return
+    }
+
+    // ===== 开始录音 =====
+    try {
+      // 停止数字人说话
+      if (sdkRef.current) {
+        try { sdkRef.current.interactiveidle() } catch {}
+        isSpeakingRef.current = false
+        setIsSpeaking(false)
+      }
+
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      const recorder = new MediaRecorder(stream, { mimeType: 'audio/webm' })
+      mediaRecorderRef.current = recorder
+      audioChunksRef.current = []
+
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) audioChunksRef.current.push(e.data)
+      }
+
+      recorder.onstop = async () => {
+        // 释放麦克风
+        stream.getTracks().forEach((t) => t.stop())
+
+        const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' })
+        if (blob.size === 0) return
+
+        setInputValue('🎤 识别中...')
+
+        try {
+          // ① 语音 → 文字
+          const form = new FormData()
+          form.append('file', blob, 'recording.webm')
+          const sttRes = await fetch('http://localhost:8000/api/stt', { method: 'POST', body: form })
+          const sttData = await sttRes.json()
+          const recognized = sttData.text || ''
+          setInputValue('')
+
+          if (!recognized || recognized === '未识别到语音') return
+
+          // ② 自动作为用户消息发送
+          const now = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
+          setMessages((prev) => [...prev, { id: ++msgIdRef.current, role: 'user', content: recognized, time: now }])
+
+          // ③ 调用聊天接口
+          const chatRes = await fetch('http://localhost:8000/api/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ question: recognized }),
+          })
+          const chatData = await chatRes.json()
+          const reply: string = chatData.answer || '抱歉，我现在无法回答。'
+
+          setMessages((prev) => [...prev, {
+            id: ++msgIdRef.current, role: 'ai', content: reply,
+            time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
+          }])
+          lastActivityRef.current = Date.now()
+
+          // ④ 数字人口播
+          if (sdkRef.current) {
+            setTimeout(() => {
+              try { sdkRef.current.interactiveidle() } catch {}
+              setTimeout(() => {
+                setIsSpeaking(true)
+                try { sdkRef.current.speak(reply, true, true) } catch {}
+              }, 200)
+            }, 100)
+          }
+        } catch {
+          setInputValue('')
+        }
+      }
+
+      recorder.start()
       setIsRecording(true)
-      setInputValue('🎤 语音识别中...')
-      setTimeout(() => {
-        setIsRecording(false)
-        setInputValue('')
-      }, 3000)
+      setInputValue('🎤 正在聆听...')
+      lastActivityRef.current = Date.now()
+    } catch (err: any) {
+      console.error('麦克风权限被拒绝或出错:', err)
+      setInputValue('')
     }
   }, [isRecording])
 
@@ -220,8 +385,8 @@ const TouristPage: React.FC = () => {
         <div className="avatar-footer">
           <EnvironmentOutlined className="avatar-footer-icon" style={{ color: 'var(--green)' }} />
           <div className="avatar-footer-text">
-            <div className="avatar-footer-title">🗺️ 推荐路线：灵山胜境经典一日游</div>
-            <div className="avatar-footer-desc">灵山大佛 → 九龙灌浴 → 梵宫 → 五印坛城</div>
+            <div className="avatar-footer-title">🗺️ {routeName}</div>
+            <div className="avatar-footer-desc">{routeDesc}</div>
           </div>
           <span className={`footer-state ${sdkState === 'ready' ? 'online' : ''}`}>
             {sdkState === 'loading' ? '⏳ 加载中' : sdkState === 'error' ? '⚠️ 离线' : isSpeaking ? '🗣️ 说话中' : '🟢 在线'}
@@ -233,7 +398,7 @@ const TouristPage: React.FC = () => {
       <div className="chat-panel">
 
         {/* 景点卡片区 */}
-        <div className="spots-header">🏞️ 景点卡片</div>
+        <div className="spots-header"> 景点卡片</div>
         <div className="spots-row">
           {SPOTS.map((spot) => (
             <div key={spot.name} className="spot-card" onClick={() => handleSpotClick(spot.name)}>
@@ -267,7 +432,13 @@ const TouristPage: React.FC = () => {
                   <span className="message-sender">{msg.role === 'user' ? '我' : 'AI 导游'}</span>
                   <span className="message-time">{msg.time}</span>
                 </div>
-                <div className="message-bubble">{msg.content}</div>
+                <div className="message-bubble">
+                  {msg.type === 'voice' ? (
+                    <span className="voice-msg">语音消息</span>
+                  ) : (
+                    msg.content
+                  )}
+                </div>
               </div>
             </div>
           ))}

@@ -18,8 +18,8 @@
   inset: 0;
   z-index: 0;
   background: var(--bg-image) center / cover no-repeat;
-  filter: blur(6px) brightness(1.08) saturate(1.15);
-  transform: scale(1.05);                     /* 模糊边缘不外露 */
+  filter: blur(4px) brightness(1.05);
+  transform: scale(1.05);
 }
 
 /* 页面四角虚线装饰 */
@@ -53,8 +53,7 @@
   justify-content: center;
   align-items: center;
   padding: 12px 0;
-  background: var(--white-alpha);
-  backdrop-filter: blur(12px);
+  background: rgba(255, 255, 255, 0.78);
   border-radius: var(--radius-md);
   border: 1px solid var(--border-light);
   flex-shrink: 0;
@@ -76,8 +75,7 @@
   justify-content: center;
   border-radius: var(--radius-lg);
   overflow: hidden;
-  background: var(--white-alpha);
-  backdrop-filter: blur(10px);
+  background: rgba(255, 255, 255, 0.78);
   border: 1px solid var(--border-light);
 }
 
@@ -211,11 +209,11 @@
 
 /* --- 顶部景点卡片区 --- */
 .spots-header {
-  font-size: 15px;
+  font-size: 20px;
   font-weight: 700;
   color: #fff;
   text-shadow: 0 1px 4px rgba(0,0,0,0.2);
-  padding: 12px 6px 10px;
+  padding: 3px 6px 10px;
   letter-spacing: 1px;
   flex-shrink: 0;
 }
@@ -392,6 +390,35 @@
   border-top-right-radius: 6px;
 }
 
+/* 语音消息条 */
+.voice-msg {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 13px;
+  color: var(--text-mid);
+}
+
+.voice-msg::after {
+  content: '';
+  display: inline-block;
+  width: 2px;
+  height: 14px;
+  background: var(--orange);
+  border-radius: 1px;
+  margin-left: 6px;
+  animation: voice-wave 0.8s ease-in-out infinite;
+  box-shadow:
+    4px 0 0 var(--orange),
+    8px 0 0 var(--orange),
+    12px 0 0 var(--orange);
+}
+
+@keyframes voice-wave {
+  0%, 100% { height: 8px; }
+  50%      { height: 16px; }
+}
+
 /* --- 底部输入区 --- */
 .chat-input-area {
   flex-shrink: 0;
@@ -411,8 +438,7 @@
   height: 42px;
   border-radius: 50%;
   border: 1.5px solid var(--border-light);
-  background: var(--white-alpha);
-  backdrop-filter: blur(10px);
+  background: rgba(255, 255, 255, 0.78);
   cursor: pointer;
   display: flex;
   align-items: center;
